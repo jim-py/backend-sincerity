@@ -1,0 +1,50 @@
+# VS Code REST Client: .env beside this file supplies ADMIN_TOKEN.
+# Run DELETE only over trusted localhost/SSH forwarding until HTTPS is configured.
+@baseUrl = http://127.0.0.1:3010
+
+### Empty database: 204. Otherwise 200, plain text, Cache-Control: no-store.
+GET {{baseUrl}}/stories
+
+### 201, no body. Run twice to create two identical rows.
+POST {{baseUrl}}/stories
+Content-Type: application/json; charset=utf-8
+
+< ./requests/story.json
+
+### All identical normalized texts removed: 204. Repeat: 404.
+DELETE {{baseUrl}}/stories
+Authorization: Bearer {{$dotenv ADMIN_TOKEN}}
+Content-Type: application/json
+
+< ./requests/story.json
+
+### Missing token: 401.
+DELETE {{baseUrl}}/stories
+Content-Type: application/json
+
+< ./requests/story.json
+
+### Wrong token: 401.
+DELETE {{baseUrl}}/stories
+Authorization: Bearer deliberately-wrong-manual-token
+Content-Type: application/json
+
+< ./requests/story.json
+
+### 405, Allow: GET, POST, DELETE.
+PUT {{baseUrl}}/stories
+
+### 404.
+GET {{baseUrl}}/unknown
+
+### 415.
+POST {{baseUrl}}/stories
+Content-Type: text/plain
+
+< ./requests/story.json
+
+### 400.
+POST {{baseUrl}}/stories
+Content-Type: application/json
+
+{"content":

@@ -1,0 +1,6 @@
+# Allowlist: credentials, SQL, examples and unrelated project files cannot enter the image.
+**
+!package.json
+!package-lock.json
+!src/
+!src/**
