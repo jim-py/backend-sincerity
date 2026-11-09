@@ -92,7 +92,9 @@ Worker/relay могут ждать завершения текущего выз�
 
 ## Что фактически проверено
 
-На Windows: синтаксис 31 JS-файла; 30 тестов passed, 1 PostgreSQL suite skipped. Новые in-process тесты проверяют Docker-bind/config, Unix transport body/signal, allowlist relay, ограничения тела и различие definite/uncertain обрывов. Они не открывают listening port и не запускают Ollama/PostgreSQL/контейнеры. `git diff --check` успешен.
+На Windows: синтаксис 33 JS-файлов; 32 теста passed, 1 PostgreSQL suite skipped. Тесты проверяют Docker-bind/config, transport body/signal, allowlist relay, ограничения тела и различие definite/uncertain обрывов. Добавлен native HTTP pipeline на временных Windows named pipes с поддельной Ollama: metadata 96 KiB проходит relay/client, oversized generation по-прежнему отклоняется. Это локальные моки; TCP-порты, Ollama/PostgreSQL/контейнеры не запускаются. `git diff --check` успешен.
+
+Исправление метаданных: прежний общий лимит 64 KiB мог обрывать /api/show с длинным template/license, порождая upstream_unavailable при успешном /api/version. Ошибка воспроизведена на синтетических metadata 96 KiB. Теперь лимит /api/show отдельно 1 MiB в relay и клиенте; /api/chat и /api/version остаются 64 KiB. Размер ответа установленной серверной модели не измерялся. Для применения перенесите src/ai/limits.js, обновлённые ollama.js/relay.js, выполните build ai-api и up -d --no-build ollama-relay ai-api ai-worker; одного restart старого образа недостаточно.
 
 Docker CLI здесь отсутствует, поэтому Compose config/build/up, права Unix socket в реальном Docker volume, read-only mount, host networking Ubuntu и полный внешний запрос **не проверены**. Структура YAML/Dockerfile/переменных/зависимостей проверена чтением, не Docker-валидатором. SSH-доступа нет; на сервере ничего не применялось. Исходный compose.yaml, его postgres_data и Nginx не изменены. Ограниченный runtime smoke test выше выполняет оператор.
 

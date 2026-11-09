@@ -2,8 +2,8 @@ import { TextDecoder } from 'node:util';
 import { CONTEXT_SIZE, MODEL, OLLAMA_URL } from './config.js';
 import { OllamaError } from './errors.js';
 import { socketFetch } from './socket-fetch.js';
+import { ollamaResponseLimit } from './limits.js';
 
-const RESPONSE_LIMIT = 64 * 1024;
 const NOT_SENT = new Set(['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ENETUNREACH', 'EHOSTUNREACH']);
 
 // Every exception is sanitised here. Neither upstream error bodies nor prompts leave this module.
@@ -26,7 +26,7 @@ export function createOllama(config, fetchImpl = config.socketPath ? socketFetch
         const { done, value } = await reader.read();
         if (done) break;
         total += value.byteLength;
-        if (total > RESPONSE_LIMIT) {
+        if (total > ollamaResponseLimit(path)) {
           controller.abort();
           await reader.cancel().catch(() => {});
           throw new OllamaError('upstream_response_too_large', { uncertain: generation });
