@@ -2,9 +2,12 @@ import { ConfigurationError, databaseConfig, port, required } from '../config.js
 
 export const MODEL = 'qwen3.5:35b-a3b-q4_K_M';
 export const OLLAMA_URL = 'http://127.0.0.1:11434';
-export const CONTEXT_SIZE = 4096;
-export const MAX_JSON_BYTES = 32 * 1024;
-export const MAX_INPUT_BYTES = 2048;
+export const CONTEXT_SIZE = 8192;
+export const CONTEXT_RESERVE = 1024;
+export const MAX_JSON_BYTES = 64 * 1024;
+export const MAX_INPUT_BYTES = 6 * 1024;
+export const DEFAULT_MAX_TOKENS = 512;
+export const MAX_OUTPUT_TOKENS = 1024;
 export const MAX_MESSAGES = 8;
 
 function integer(env, name, fallback, min, max) {
@@ -37,7 +40,7 @@ export function loadAiConfig(env = process.env) {
     socketPath: env.OLLAMA_SOCKET_PATH ? requiredSocket(env.OLLAMA_SOCKET_PATH) : undefined,
     timezone,
     database: databaseConfig(env),
-    maxTokens: integer(env, 'AI_MAX_TOKENS', 350, 1, 350),
+    maxTokens: integer(env, 'AI_MAX_TOKENS', DEFAULT_MAX_TOKENS, 1, MAX_OUTPUT_TOKENS),
     queueLimit: integer(env, 'AI_QUEUE_LIMIT', 8, 1, 100),
     queueWaitMs: integer(env, 'AI_QUEUE_WAIT_MS', 120_000, 1000, 300_000),
     loadTimeoutMs: integer(env, 'AI_LOAD_TIMEOUT_MS', 600_000, 1000, 3_600_000),

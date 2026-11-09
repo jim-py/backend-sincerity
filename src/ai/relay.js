@@ -3,6 +3,7 @@ import { lstat, unlink, chmod } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { pathToFileURL } from 'node:url';
 import { ollamaResponseLimit } from './limits.js';
+import { MAX_JSON_BYTES } from './config.js';
 
 export const SOCKET = '/run/ollama-relay/ollama.sock';
 const ROUTES = new Map([['/api/version', 'GET'], ['/api/show', 'POST'], ['/api/chat', 'POST']]);
@@ -24,7 +25,7 @@ export function createRelay(connect = httpRequest) {
     let size = 0;
     req.on('data', (chunk) => {
       size += chunk.length;
-      if (size > 32 * 1024) { req.pause(); error(413); }
+      if (size > MAX_JSON_BYTES) { req.pause(); error(413); }
       else chunks.push(chunk);
     });
     req.on('end', () => {

@@ -17,7 +17,7 @@ test('Ollama request fixes URL/model/limits and maps actual usage without forwar
     assert.equal(body.stream, false);
     assert.equal(body.think, false);
     assert.equal(body.keep_alive, '30m');
-    assert.deepEqual(body.options, { temperature: 0.2, num_ctx: 4096, num_predict: 350 });
+    assert.deepEqual(body.options, { temperature: 0.2, num_ctx: 8192, num_predict: 350 });
     assert.equal(options.headers.Authorization, undefined);
     assert.equal(options.redirect, 'error');
     return json(reply());

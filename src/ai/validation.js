@@ -1,11 +1,11 @@
-import { MAX_INPUT_BYTES, MAX_MESSAGES, MODEL } from './config.js';
+import { CONTEXT_RESERVE, CONTEXT_SIZE, DEFAULT_MAX_TOKENS, MAX_INPUT_BYTES, MAX_MESSAGES, MODEL } from './config.js';
 import { AiHttpError } from './errors.js';
 
 function object(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export function validateChat(value, maxTokens = 350) {
+export function validateChat(value, maxTokens = DEFAULT_MAX_TOKENS) {
   const invalid = () => { throw new AiHttpError(400, 'invalid_request'); };
   if (!object(value) || Object.keys(value).some((key) => !['model', 'messages', 'stream', 'max_tokens'].includes(key))) invalid();
   if ('model' in value && value.model !== MODEL) throw new AiHttpError(400, 'unsupported_model');
@@ -25,7 +25,11 @@ export function validateChat(value, maxTokens = 350) {
     return { role: message.role, content: message.content };
   });
   if (!hasUser || messages.at(-1).role !== 'user') invalid();
-  if (bytes > MAX_INPUT_BYTES) throw new AiHttpError(400, 'context_budget_exceeded');
+  // Conservative byte envelope, not a tokenizer. Reserve space for the model's
+  // chat template/roles and output; actual Ollama counters are checked separately.
+  if (bytes > MAX_INPUT_BYTES || bytes + budget + CONTEXT_RESERVE > CONTEXT_SIZE) {
+    throw new AiHttpError(400, 'context_budget_exceeded');
+  }
   return { messages, maxTokens: budget };
 }
 

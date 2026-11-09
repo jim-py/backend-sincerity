@@ -3,7 +3,7 @@ import { Readable } from 'node:stream';
 export const KEY = 'unit-test-key-that-is-never-a-production-secret';
 export const config = { apiKey: KEY, timezone: 'UTC', queueLimit: 8, rateLimit: 6,
   queueWaitMs: 120_000, loadTimeoutMs: 600_000, generationTimeoutMs: 300_000,
-  maxAttempts: 2, maxTokens: 350 };
+  maxAttempts: 2, maxTokens: 512 };
 
 export function request({ method = 'GET', url = '/ai/habit-summary', body, raw, headers = {}, token = KEY, chunks } = {}) {
   const bytes = raw ?? (body === undefined ? Buffer.alloc(0) : Buffer.from(JSON.stringify(body)));

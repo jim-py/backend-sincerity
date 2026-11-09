@@ -76,9 +76,15 @@ unset AI_SERVICE_KEY
 
 В Postman Desktop: URL `https://api.productivumtesting.ru/ai/v1/chat/completions`, Authorization → Bearer Token → серверный AI_SERVICE_KEY, Body → raw → JSON как в curl. Секрет остаётся на стороне доверенного оператора/сервера, в React/Android не включается. Все четыре AI-маршрута из AI.md остаются прежними. Сводки по-прежнему описывают структуру generic JSON до появления контракта привычек.
 
+### Лимиты для промпта Productivum — 10.11.2026
+
+System-промпт владельца занимает 2183 UTF-8 байта и не проходил прежние 2048. Теперь общая длина content всех сообщений — до **6144 байт**, то есть для остальных сообщений после этого system остаётся 3961 байт. Тело HTTP/relay/Nginx — до **64 KiB**, включая JSON-экранирование; контекст модели num_ctx=8192. Выход по умолчанию — 512 токенов, AI_MAX_TOKENS допускает до 1024. Если в существующем .env уже AI_MAX_TOKENS=350, он останется действующим пределом: явно измените его на 512 для запроса max_tokens=512. Запросы длиннее входного бюджета отклоняются, не обрезаются.
+
+Для применения перенесите обновлённые src/ai/config.js, validation.js и relay.js вместе с compose.override.yaml, затем выполните build ai-api и up -d --no-build ollama-relay ai-api ai-worker. В существующем Nginx location /ai/ замените client_max_body_size 32k на **64k** (см. обновлённый deploy/nginx-ai.conf), проверьте `sudo nginx -t` и только при успехе `sudo systemctl reload nginx`. Другие маршруты, PostgreSQL, порт 3011 и Ollama config не меняются. Сам system не обеспечивает строгую JSON-генерацию chat: проверяйте content и finish_reason на стороне Productivum.
+
 ## Nginx
 
-Сохраняйте уже подготовленный location `/ai/` с `proxy_pass http://127.0.0.1:3012;` **без завершающего слеша** и proxy_read_timeout=2000s. Остальной `/` остаётся на 3011, SSL/Certbot не меняются. Готовый сниппет — deploy/nginx-ai.conf. Если location уже применён, менять его из-за контейнеризации не требуется. После ручного изменения: `sudo nginx -t && sudo systemctl reload nginx`. Backend/API, PostgreSQL и Ollama не должны получать новые публичные порты.
+Сохраняйте location `/ai/` с `proxy_pass http://127.0.0.1:3012;` **без завершающего слеша**, client_max_body_size=64k и proxy_read_timeout=2000s. Остальной `/` остаётся на 3011, SSL/Certbot не меняются. Готовый сниппет — deploy/nginx-ai.conf. Старая версия location с 32k пропустит обычный короткий запрос, но требует обновления для всего нового wire-бюджета. После ручного изменения: `sudo nginx -t && sudo systemctl reload nginx`. Backend/API, PostgreSQL и Ollama не должны получать новые публичные порты.
 
 ## Остановка и откат
 
@@ -92,7 +98,7 @@ Worker/relay могут ждать завершения текущего выз�
 
 ## Что фактически проверено
 
-На Windows: синтаксис 33 JS-файлов; 32 теста passed, 1 PostgreSQL suite skipped. Тесты проверяют Docker-bind/config, transport body/signal, allowlist relay, ограничения тела и различие definite/uncertain обрывов. Добавлен native HTTP pipeline на временных Windows named pipes с поддельной Ollama: metadata 96 KiB проходит relay/client, oversized generation по-прежнему отклоняется. Это локальные моки; TCP-порты, Ollama/PostgreSQL/контейнеры не запускаются. `git diff --check` успешен.
+На Windows: синтаксис 35 JS-файлов; 37 тестов passed, 1 PostgreSQL suite skipped. Тесты проверяют Docker-bind/config, transport body/signal, allowlist relay, ограничения тела и различие definite/uncertain обрывов. Native HTTP pipeline на временных Windows named pipes с поддельной Ollama проверяет metadata 96 KiB и отказ oversized generation. Новый регрессионный набор использует точный system Productivum + синтетический JSON статистики: сохранность текста, UTF-8 и Unicode-экранирование, пределы 6144 байт/64 KiB, выходные лимиты и num_ctx=8192. Это локальные моки; TCP-порты, Ollama/PostgreSQL/контейнеры не запускаются. `git diff --check` успешен.
 
 Исправление метаданных: прежний общий лимит 64 KiB мог обрывать /api/show с длинным template/license, порождая upstream_unavailable при успешном /api/version. Ошибка воспроизведена на синтетических metadata 96 KiB. Теперь лимит /api/show отдельно 1 MiB в relay и клиенте; /api/chat и /api/version остаются 64 KiB. Размер ответа установленной серверной модели не измерялся. Для применения перенесите src/ai/limits.js, обновлённые ollama.js/relay.js, выполните build ai-api и up -d --no-build ollama-relay ai-api ai-worker; одного restart старого образа недостаточно.
 

@@ -71,9 +71,9 @@ test('JSON parsing limits Content-Type, UTF8, bytes and malformed syntax before 
     [{ body: {}, headers: { 'content-type': 'text/plain' } }, 415],
     [{ body: {}, headers: { 'content-encoding': 'gzip' } }, 415],
     [{ raw: Buffer.from([0xff]) }, 400],
-    [{ raw: Buffer.from('x'.repeat(32 * 1024 + 1)) }, 413],
-    [{ chunks: [Buffer.alloc(20 * 1024), Buffer.alloc(20 * 1024)], headers: { 'content-type': 'application/json' } }, 413],
-    [{ raw: Buffer.from('{}'), headers: { 'content-length': String(32 * 1024 + 1) } }, 413],
+    [{ raw: Buffer.from('x'.repeat(64 * 1024 + 1)) }, 413],
+    [{ chunks: [Buffer.alloc(40 * 1024), Buffer.alloc(40 * 1024)], headers: { 'content-type': 'application/json' } }, 413],
+    [{ raw: Buffer.from('{}'), headers: { 'content-length': String(64 * 1024 + 1) } }, 413],
   ]) assert.equal((await invoke({ method: 'POST', ...options }, repo)).status, status);
 });
 

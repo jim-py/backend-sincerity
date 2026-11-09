@@ -80,7 +80,7 @@ test('relay forwards only fixed Ollama routes and never forwards caller credenti
 
 test('relay bounds input and treats an ambiguous upstream disconnect as a broken transport', async () => {
   const large = createRelay(() => assert.fail('oversized body reached Ollama'));
-  const req = Readable.from([Buffer.alloc(32 * 1024 + 1)]); req.method = 'POST'; req.url = '/api/chat';
+  const req = Readable.from([Buffer.alloc(64 * 1024 + 1)]); req.method = 'POST'; req.url = '/api/chat';
   const res = response(); large.emit('request', req, res); await res.done;
   assert.equal(res.status, 413); large.close();
   for (const [code, status] of [['ECONNREFUSED', 503], ['ECONNRESET', undefined]]) {
