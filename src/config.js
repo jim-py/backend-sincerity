@@ -1,6 +1,6 @@
 export class ConfigurationError extends Error {}
 
-function required(env, name) {
+export function required(env, name) {
   const value = env[name];
   if (typeof value !== 'string' || value.trim() === '' || value.startsWith('REPLACE_')) {
     throw new ConfigurationError(`Set ${name} to a non-empty value (not an example placeholder).`);
@@ -8,11 +8,21 @@ function required(env, name) {
   return value;
 }
 
-function port(value, name) {
+export function port(value, name) {
   if (!/^\d+$/.test(value) || !Number.isInteger(Number(value)) || Number(value) < 1 || Number(value) > 65535) {
     throw new ConfigurationError(`${name} must be an integer between 1 and 65535.`);
   }
   return Number(value);
+}
+
+export function databaseConfig(env) {
+  return {
+    host: required(env, 'PGHOST'),
+    port: port(env.PGPORT ?? '5432', 'PGPORT'),
+    database: required(env, 'PGDATABASE'),
+    user: required(env, 'PGUSER'),
+    password: required(env, 'PGPASSWORD'),
+  };
 }
 
 export function loadConfig(env = process.env) {
@@ -24,12 +34,6 @@ export function loadConfig(env = process.env) {
   return {
     port: port(env.PORT ?? '3010', 'PORT'),
     adminToken,
-    database: {
-      host: required(env, 'PGHOST'),
-      port: port(env.PGPORT ?? '5432', 'PGPORT'),
-      database: required(env, 'PGDATABASE'),
-      user: required(env, 'PGUSER'),
-      password: required(env, 'PGPASSWORD'),
-    },
+    database: databaseConfig(env),
   };
 }

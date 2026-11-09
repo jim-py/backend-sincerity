@@ -40,9 +40,9 @@ function requireJson(request) {
   }
 }
 
-async function readJson(request) {
+export async function readJson(request, maxBytes = MAX_JSON_BYTES) {
   requireJson(request);
-  if (Number(request.headers['content-length'] ?? 0) > MAX_JSON_BYTES) {
+  if (Number(request.headers['content-length'] ?? 0) > maxBytes) {
     throw new HttpError(413, 'payload_too_large');
   }
   const bytes = await new Promise((resolve, reject) => {
@@ -60,7 +60,7 @@ async function readJson(request) {
     }
     function onData(chunk) {
       total += chunk.length; // Bytes, not characters; covers chunked transfer too.
-      if (total > MAX_JSON_BYTES) {
+      if (total > maxBytes) {
         cleanup();
         request.pause();
         reject(new HttpError(413, 'payload_too_large'));
@@ -80,14 +80,14 @@ async function readJson(request) {
   }
 }
 
-function authorized(request, tokenHash) {
+export function authorized(request, tokenHash) {
   const values = request.headersDistinct.authorization;
   if (!values || values.length !== 1) return false;
   const match = /^Bearer ([A-Za-z0-9._~+/-]+=*)$/i.exec(values[0]);
   return match !== null && timingSafeEqual(hash(match[1]), tokenHash);
 }
 
-function socketError(socket, status, reason, error, extra = '') {
+export function socketError(socket, status, reason, error, extra = '') {
   if (!socket.writable) return;
   const body = JSON.stringify({ error });
   socket.end(`HTTP/1.1 ${status} ${reason}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: ${Buffer.byteLength(body)}\r\nCache-Control: no-store\r\nConnection: close\r\n${extra}\r\n${body}`);

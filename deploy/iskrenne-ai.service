@@ -1,0 +1,28 @@
+[Unit]
+Description=Iskrenne local Ollama HTTP gateway
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=iskrenne-ai
+Group=iskrenne-ai
+WorkingDirectory=/opt/iskrenne-backend
+EnvironmentFile=/etc/iskrenne-ai.env
+ExecStart=/usr/bin/node src/ai/server.js
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

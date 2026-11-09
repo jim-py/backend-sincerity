@@ -1,0 +1,29 @@
+@baseUrl = http://127.0.0.1:3012
+@jobId = REPLACE_WITH_JOB_ID_FROM_POST_RESPONSE
+
+### Saved state; no generation. All AI routes require the independent server key.
+GET {{baseUrl}}/ai/habit-summary?source=productivum
+Authorization: Bearer {{$dotenv AI_SERVICE_KEY}}
+
+### Submit a generic snapshot. Same source replaces its previous snapshot.
+POST {{baseUrl}}/ai/habit-summary?source=productivum&timezone=Europe/Moscow&language=ru
+Authorization: Bearer {{$dotenv AI_SERVICE_KEY}}
+Content-Type: application/json; charset=utf-8
+
+< ./requests/ai-source.json
+
+### Poll with backoff (10, 20, 40, 60 seconds); obey Retry-After.
+GET {{baseUrl}}/ai/jobs/{{jobId}}
+Authorization: Bearer {{$dotenv AI_SERVICE_KEY}}
+
+### Synchronous, non-streaming server-side chat. Never embed the key in a browser.
+POST {{baseUrl}}/ai/v1/chat/completions
+Authorization: Bearer {{$dotenv AI_SERVICE_KEY}}
+Content-Type: application/json
+
+{
+  "model": "qwen3.5:35b-a3b-q4_K_M",
+  "stream": false,
+  "max_tokens": 200,
+  "messages": [{ "role": "user", "content": "Кратко объясни, зачем привычкам постоянное расписание." }]
+}
