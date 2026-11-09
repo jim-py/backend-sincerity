@@ -1,0 +1,90 @@
+# Automatically merged by `docker compose up` with compose.yaml on Linux.
+# Does NOT override backend/postgres or their existing ports/volume.
+x-ai-common: &ai-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: backend-sincerity-ai:0.2.0
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+x-ai-env: &ai-env
+  NODE_ENV: production
+  AI_SERVICE_KEY: ${AI_SERVICE_KEY:?Set a separate AI_SERVICE_KEY in .env}
+  ADMIN_TOKEN: ${ADMIN_TOKEN:?Set ADMIN_TOKEN in .env}
+  AI_PORT: "3012"
+  AI_BIND_HOST: "0.0.0.0"
+  AI_TIMEZONE: ${AI_TIMEZONE:-UTC}
+  AI_QUEUE_LIMIT: ${AI_QUEUE_LIMIT:-8}
+  AI_QUEUE_WAIT_MS: ${AI_QUEUE_WAIT_MS:-120000}
+  AI_LOAD_TIMEOUT_MS: ${AI_LOAD_TIMEOUT_MS:-600000}
+  AI_GENERATION_TIMEOUT_MS: ${AI_GENERATION_TIMEOUT_MS:-300000}
+  AI_MAX_TOKENS: ${AI_MAX_TOKENS:-350}
+  AI_REQUESTS_PER_MINUTE: ${AI_REQUESTS_PER_MINUTE:-6}
+  AI_MAX_ATTEMPTS: ${AI_MAX_ATTEMPTS:-2}
+  PGHOST: postgres
+  PGPORT: "5432"
+  PGDATABASE: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+  PGUSER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+  PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+  OLLAMA_SOCKET_PATH: /run/ollama-relay/ollama.sock
+
+services:
+  ai-migrate:
+    <<: *ai-common
+    restart: "no"
+    command: ["node", "src/ai/cli.js", "migrate"]
+    environment: *ai-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ollama-relay:
+    <<: *ai-common
+    # Linux host network reaches the existing loopback-only Ollama.
+    # The relay itself binds ONLY a Unix socket, never a TCP port.
+    network_mode: host
+    command: ["node", "src/ai/relay.js"]
+    volumes:
+      - ollama_socket:/run/ollama-relay
+    healthcheck:
+      test: ["CMD", "node", "src/ai/relay-health.js"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    stop_grace_period: 2000s
+
+  ai-api:
+    <<: *ai-common
+    command: ["node", "src/ai/server.js"]
+    environment: *ai-env
+    ports:
+      - "127.0.0.1:${AI_PORT:-3012}:3012"
+    volumes:
+      - ollama_socket:/run/ollama-relay:ro
+    depends_on:
+      ai-migrate:
+        condition: service_completed_successfully
+      ollama-relay:
+        condition: service_healthy
+    stop_grace_period: 20s
+
+  ai-worker:
+    <<: *ai-common
+    command: ["node", "src/ai/worker-main.js"]
+    environment: *ai-env
+    volumes:
+      - ollama_socket:/run/ollama-relay:ro
+    depends_on:
+      ai-migrate:
+        condition: service_completed_successfully
+      ollama-relay:
+        condition: service_healthy
+    stop_grace_period: 2000s
+
+volumes:
+  ollama_socket:

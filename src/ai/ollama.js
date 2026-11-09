@@ -1,12 +1,13 @@
 import { TextDecoder } from 'node:util';
 import { CONTEXT_SIZE, MODEL, OLLAMA_URL } from './config.js';
 import { OllamaError } from './errors.js';
+import { socketFetch } from './socket-fetch.js';
 
 const RESPONSE_LIMIT = 64 * 1024;
 const NOT_SENT = new Set(['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ENETUNREACH', 'EHOSTUNREACH']);
 
 // Every exception is sanitised here. Neither upstream error bodies nor prompts leave this module.
-export function createOllama(config, fetchImpl = globalThis.fetch) {
+export function createOllama(config, fetchImpl = config.socketPath ? socketFetch(config.socketPath) : globalThis.fetch) {
   async function request(path, body, timeoutMs, { generation = false } = {}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);

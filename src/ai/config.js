@@ -26,11 +26,15 @@ export function loadAiConfig(env = process.env) {
     throw new ConfigurationError('AI_PORT must not replace ports 3010, 3011 or 11434.');
   }
   const timezone = env.AI_TIMEZONE ?? 'UTC';
+  const host = env.AI_BIND_HOST ?? '127.0.0.1';
+  if (!['127.0.0.1', '0.0.0.0'].includes(host)) throw new ConfigurationError('AI_BIND_HOST must be 127.0.0.1 or 0.0.0.0.');
   try { new Intl.DateTimeFormat('en', { timeZone: timezone }).format(); }
   catch { throw new ConfigurationError('AI_TIMEZONE must be an IANA timezone.'); }
   return {
     apiKey,
     port: listenPort,
+    host,
+    socketPath: env.OLLAMA_SOCKET_PATH ? requiredSocket(env.OLLAMA_SOCKET_PATH) : undefined,
     timezone,
     database: databaseConfig(env),
     maxTokens: integer(env, 'AI_MAX_TOKENS', 350, 1, 350),
@@ -41,4 +45,9 @@ export function loadAiConfig(env = process.env) {
     rateLimit: integer(env, 'AI_REQUESTS_PER_MINUTE', 6, 1, 600),
     maxAttempts: integer(env, 'AI_MAX_ATTEMPTS', 2, 1, 3),
   };
+}
+
+function requiredSocket(value) {
+  if (value !== '/run/ollama-relay/ollama.sock') throw new ConfigurationError('OLLAMA_SOCKET_PATH must be /run/ollama-relay/ollama.sock.');
+  return value;
 }

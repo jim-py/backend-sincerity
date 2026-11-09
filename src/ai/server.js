@@ -28,7 +28,7 @@ async function main() {
   process.on('uncaughtException', () => { console.error('[ai-http] fatal_error'); void shutdown(1); });
   process.on('unhandledRejection', () => { console.error('[ai-http] rejected_operation'); void shutdown(1); });
   server.on('error', () => { console.error('[ai-http] listen_failed_check_AI_PORT'); void shutdown(1); });
-  server.listen(config.port, '127.0.0.1', () => console.info(`[ai-http] listening_on_loopback_${config.port}`));
+  server.listen(config.port, config.host, () => console.info(`[ai-http] listening_on_${config.host}_${config.port}`));
 }
 
 main().catch((error) => {

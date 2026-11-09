@@ -1,6 +1,8 @@
-# Allowlist: credentials, SQL, examples and unrelated project files cannot enter the image.
+# Allowlist: no credentials/examples/unrelated files. Only the additive AI migration enters.
 **
 !package.json
 !package-lock.json
 !src/
 !src/**
+!sql/
+!sql/002-ai.sql
